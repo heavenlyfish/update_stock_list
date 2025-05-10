@@ -6,6 +6,7 @@ import os, json, requests, pandas as pd
 import time
 from bs4 import BeautifulSoup, FeatureNotFound
 import gspread
+import io
 from gspread_dataframe import set_with_dataframe
 from google.oauth2.service_account import Credentials
 
