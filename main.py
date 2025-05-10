@@ -16,43 +16,56 @@ UA = (
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
+BASE = "isin.twse.com.tw"
+
+def fetch_twse(mode: int, headers: dict, use_https: bool = True) -> requests.Response:
+    scheme = "https" if use_https else "http"
+    url = f"{scheme}://{BASE}/isin/C_public.jsp?strMode={mode}"
+    return requests.get(url, timeout=30, headers=headers)
 
 def get_isin(mode: int,
              start_mark: str | None = None,
              end_mark: str | None = None,
              max_retry: int = 3,
              backoff: float = 2.0) -> pd.DataFrame:
-    """
-    抓取 TWSE/OTC/興櫃 ISIN。
-    若解析失敗，最多 retry `max_retry` 次；最後回傳空 df，
-    不讓整支程式崩潰。
-    """
-    url = f"https://isin.twse.com.tw/isin/C_public.jsp?strMode={mode}"
     headers = {"User-Agent": UA}
+    use_https = True            # 先以 HTTPS 嘗試
 
     for attempt in range(1, max_retry + 1):
-        r = requests.get(url, timeout=30, headers=headers)
+        # ① 抓資料（失敗就自動改 HTTP，再重試）
+        try:
+            r = fetch_twse(mode, headers, use_https=use_https)
+        except requests.RequestException as e:
+            print(f"[warn] mode={mode} 抓取失敗 ({e}); 改用 HTTP")
+            use_https = False
+            time.sleep(backoff * attempt)
+            continue
+
         r.encoding = "big5"
         soup = BeautifulSoup(r.text, "lxml")
-
         table = soup.select_one("table.h4")
-        if table:
-            break                                   # 解析成功 → 跳出 retry 迴圈
+
+        if table:                       # ② 成功抓到 table
+            break
         else:
             print(f"[warn] mode={mode} 第 {attempt}/{max_retry} 次抓不到 table.h4")
+            if attempt == 1:            # 第一次抓不到就切 HTTP 再試
+                use_https = False
             if attempt < max_retry:
-                time.sleep(backoff * attempt)       # 指數退避
-            else:
-                # 最後一次仍失敗：改用 pandas.read_html() 做最後嘗試
-                try:
-                    df_list = pd.read_html(r.text, header=0, encoding="big5")
-                    if df_list:
-                        table_html = df_list[0].to_html(index=False)
-                        table = BeautifulSoup(table_html, "lxml").select_one("table")
-                except ValueError:
-                    table = None
+                time.sleep(backoff * attempt)
+    else:
+        # ③ 三次都失敗 → 最後用 read_html 試試
+        try:
+            df_list = pd.read_html(
+                io.StringIO(r.text), header=0, encoding="big5", flavor="lxml"
+            )
+            if df_list:
+                table_html = df_list[0].to_html(index=False)
+                table = BeautifulSoup(table_html, "lxml").select_one("table")
+        except ValueError:
+            table = None
 
-    if not table:                                   # 仍失敗 → 回傳空 df
+    if not table:
         print(f"[error] mode={mode} 解析失敗，回傳空 DataFrame")
         return pd.DataFrame(columns=["代號", "簡稱", "市場別", "產業別"])
 
