@@ -9,15 +9,53 @@ from gspread_dataframe import set_with_dataframe
 from google.oauth2.service_account import Credentials
 
 
+UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+
 def get_isin(mode: int,
              start_mark: str | None = None,
-             end_mark: str | None = None) -> pd.DataFrame:
+             end_mark: str | None = None,
+             max_retry: int = 3,
+             backoff: float = 2.0) -> pd.DataFrame:
+    """
+    抓取 TWSE/OTC/興櫃 ISIN。
+    若解析失敗，最多 retry `max_retry` 次；最後回傳空 df，
+    不讓整支程式崩潰。
+    """
     url = f"https://isin.twse.com.tw/isin/C_public.jsp?strMode={mode}"
-    r = requests.get(url, timeout=30)
-    r.encoding = "big5"
-    soup = BeautifulSoup(r.text, "lxml")
+    headers = {"User-Agent": UA}
 
-    table = soup.select_one("table.h4")
+    for attempt in range(1, max_retry + 1):
+        r = requests.get(url, timeout=30, headers=headers)
+        r.encoding = "big5"
+        soup = BeautifulSoup(r.text, "lxml")
+
+        table = soup.select_one("table.h4")
+        if table:
+            break                                   # 解析成功 → 跳出 retry 迴圈
+        else:
+            print(f"[warn] mode={mode} 第 {attempt}/{max_retry} 次抓不到 table.h4")
+            if attempt < max_retry:
+                time.sleep(backoff * attempt)       # 指數退避
+            else:
+                # 最後一次仍失敗：改用 pandas.read_html() 做最後嘗試
+                try:
+                    df_list = pd.read_html(r.text, header=0, encoding="big5")
+                    if df_list:
+                        table_html = df_list[0].to_html(index=False)
+                        table = BeautifulSoup(table_html, "lxml").select_one("table")
+                except ValueError:
+                    table = None
+
+    if not table:                                   # 仍失敗 → 回傳空 df
+        print(f"[error] mode={mode} 解析失敗，回傳空 DataFrame")
+        return pd.DataFrame(columns=["代號", "簡稱", "市場別", "產業別"])
+
+    # ---------- 以下與原本邏輯相同 ----------
     head_tr = next(
         tr for tr in table.find_all("tr")
         if tr.find("td") and tr.find("td").get_text(strip=True).startswith("有價證券代號")
@@ -28,7 +66,7 @@ def get_isin(mode: int,
     for tr in head_tr.find_next_siblings("tr"):
         tds = [td.get_text(strip=True) for td in tr.find_all("td")]
 
-        if len(tds) == 1:                     # 分類列
+        if len(tds) == 1:  # 分類列
             mark = tds[0]
             if start_mark and mark.startswith(start_mark):
                 collect = True
@@ -41,6 +79,9 @@ def get_isin(mode: int,
             rows.append(tds)
 
     df = pd.DataFrame(rows, columns=headers)
+    if df.empty:
+        return pd.DataFrame(columns=["代號", "簡稱", "市場別", "產業別"])
+
     df[["代號", "簡稱"]] = (
         df["有價證券代號及名稱"]
           .str.replace("\u3000", " ", regex=False)
