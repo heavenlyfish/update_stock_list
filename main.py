@@ -83,6 +83,11 @@ if __name__ == "__main__":
 
     df_all = crawl_all()
     
-    out_path = "data/stock_list.csv"
+    out_dir  = "data"
+    os.makedirs(out_dir, exist_ok=True)          # ← 關鍵：自動建資料夾
+    out_path = os.path.join(out_dir, "stock_list.csv")
+
     df_all.to_csv(out_path, index=False, encoding="utf-8-sig")
     print(f"CSV saved to {out_path}")
+
+    #upload_to_gsheet(df_all)                     # 如果你還要貼 Google Sheets
