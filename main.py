@@ -108,12 +108,20 @@ def get_isin(mode: int,
 def crawl_all() -> pd.DataFrame:
     twse = get_isin(2, start_mark="股票", end_mark="上市認購")
     otc  = get_isin(4, start_mark="股票", end_mark="特別股")
-    emg  = get_isin(5)
 
-    return (pd.concat([twse, otc, emg], ignore_index=True)
-              .drop_duplicates(subset="代號")
-              .sort_values("代號")
-              .reset_index(drop=True))
+    # 取得興櫃（mode=5）
+    emg  = get_isin(5)
+    if emg.empty:
+        print("[warn] 興櫃抓取失敗，將跳過合併")
+        emg = pd.DataFrame(columns=["代號", "簡稱", "市場別", "產業別"])
+
+    # 合併三個市場
+    return (
+        pd.concat([twse, otc, emg], ignore_index=True)
+          .drop_duplicates(subset="代號")
+          .sort_values("代號")
+          .reset_index(drop=True)
+    )
 
 
 def upload_to_gsheet(df: pd.DataFrame):
