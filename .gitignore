@@ -1,0 +1,39 @@
+# === Python 建置產物 ===========
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# === 虛擬環境 ==================
+.env/
+.venv/
+venv/
+
+# === IDE 與編輯器設定 ==========
+.vscode/
+.idea/
+*.sublime-*
+
+# === 作業系統暫存檔 ============
+.DS_Store
+Thumbs.db
+
+# === 憑證／機密 =================
+*.json
+!firebase.json         # 例外：若有特定 JSON 要追蹤可用 ! 反向排除
+secrets/
+*.p12
+*.pem
+
+# === 日誌與暫存資料 =============
+*.log
+
+# === Jupyter Notebook Checkpoint
+.ipynb_checkpoints/
+
+# === 如果你 **不想** 把 CSV 回 push =====
+# (目前 workflow 需要 commit data/stock_list.csv 就不要加)
+data/*.csv
