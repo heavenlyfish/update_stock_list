@@ -1,5 +1,5 @@
 # .github/workflows/update_isin.yml
-name: Update TW ISIN 
+name: Update TW ISIN
 
 on:
   schedule:
@@ -9,43 +9,43 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    permissions:                 # 讓 workflow 能 push
-      contents: write            # GITHUB_TOKEN 會自動注入
+    permissions:
+      contents: write            # GITHUB_TOKEN 能 push
+
     steps:
+      # 取得程式碼
       - uses: actions/checkout@v4
 
+      # 設定 Python
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-    # ── ① 先升級 pip ─────────────────────────────
-    - name: Upgrade pip
-    run: |
-      python -m pip install --upgrade pip
-      python -m pip --version
+      # ── ① 升級 pip ─────────────────────────────
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip --version
 
-    # ── ② 再安裝專案依賴 ────────────────────────      
+      # ── ② 安裝依賴 ─────────────────────────────
       - name: Install deps
         run: python -m pip install -r requirements.txt
 
-    # ── ③ 執行爬蟲程式，貼 Google Sheet & 產生 CSV ─
+      # ── ③ 執行爬蟲，貼 Google Sheets & 產生 CSV ─
       - name: Run crawler & upload
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GSHEET_ID: ${{ secrets.GSHEET_ID }}
         run: python main.py
 
-    # ── ④ 若 CSV 更新就 commit & push 回 repo ───
-      # ➜ 新增：若 CSV 更新就 commit + push
+      # ── ④ 若 CSV 有變更就 commit & push 回 repo ─
       - name: Commit CSV if changed
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 僅追蹤 CSV（或整個 data/ 資料夾）
           git add data/stock_list.csv
 
-          # 檢查是否有差異
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
