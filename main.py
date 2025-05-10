@@ -3,7 +3,8 @@
 https://docs.google.com/spreadsheets/d/GSHEET_ID (工作表「上市櫃」)
 """
 import os, json, requests, pandas as pd
-from bs4 import BeautifulSoup
+import time
+from bs4 import BeautifulSoup, FeatureNotFound
 import gspread
 from gspread_dataframe import set_with_dataframe
 from google.oauth2.service_account import Credentials
