@@ -1,6 +1,7 @@
 requests
 pandas
 beautifulsoup4
+lxml                  # ← 新增這行
 gspread
-gspread_dataframe
+gspread-dataframe
 google-auth
