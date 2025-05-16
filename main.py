@@ -105,23 +105,32 @@ def get_isin(mode: int,
     return df[["代號", "簡稱", "市場別", "產業別"]]
 
 
+from datetime import datetime  # Add this import if not already at the top
+
 def crawl_all() -> pd.DataFrame:
     twse = get_isin(2, start_mark="股票", end_mark="上市認購")
     otc  = get_isin(4, start_mark="股票", end_mark="特別股")
-
-    # 取得興櫃（mode=5）
     emg  = get_isin(5)
     if emg.empty:
         print("[warn] 興櫃抓取失敗，將跳過合併")
         emg = pd.DataFrame(columns=["代號", "簡稱", "市場別", "產業別"])
 
     # 合併三個市場
-    return (
+    df_all = (
         pd.concat([twse, otc, emg], ignore_index=True)
           .drop_duplicates(subset="代號")
           .sort_values("代號")
           .reset_index(drop=True)
     )
+
+    # 🕒 新增「更新日」欄位
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    df_all["更新日"] = now_str
+
+    # 如果你想要「更新日」排第一欄，加入這行：
+    df_all = df_all[["更新日", "代號", "簡稱", "市場別", "產業別"]]
+
+    return df_all
 
 
 def upload_to_gsheet(df: pd.DataFrame):
