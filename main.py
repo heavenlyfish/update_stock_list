@@ -128,7 +128,7 @@ def crawl_all() -> pd.DataFrame:
     df_all["更新日"] = now_str
 
     # 如果你想要「更新日」排第一欄，加入這行：
-    df_all = df_all[["更新日", "代號", "簡稱", "市場別", "產業別"]]
+    df_all = df_all[["代號", "簡稱", "市場別", "產業別", "更新日"]]
 
     return df_all
 
