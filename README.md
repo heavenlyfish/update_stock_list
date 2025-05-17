@@ -19,6 +19,16 @@ Schedules
 
 ---
 
+### 💡 Developer Note: Prevent Push Conflicts with CI
+
+Since the GitHub Actions workflow auto-commits `data/stock_list.csv` on schedule, your local branch may fall behind `origin/main`.
+
+**To avoid push conflicts, always pull first before committing:**
+
+```bash
+git pull --no-rebase origin main
+```
+
 ## 🗺️ Repository layout
 
 ```text
