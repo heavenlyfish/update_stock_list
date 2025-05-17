@@ -9,7 +9,7 @@
 
 | Stage | Tool | Result |
 |-------|------|--------|
-| **1. Crawl ISIN** (上市 / 上櫃 / 興櫃) | `python main.py` on GitHub Actions | `data/stock_list.csv` UTF-8 (bot-committed)<br>Optional: sync to Google Sheet 〈上市櫃〉 |
+| **1. Crawl ISIN** (上市 / 上櫃 / 興櫃) | `python main.py` on GitHub Actions | `data/stock_list.csv` UTF-8 (bot-committed)<br>Includes `更新日` column (timestamp)<br>Optional: sync to Google Sheet 〈上市櫃〉 |
 | **2. Crawl Taifex stock-futures list** | Google Apps Script | Write ⬇ to Sheet 〈股期表〉 A:B |
 | **3. Copy codes to analysis sheets** | Google Apps Script | Sync 股期表 A2↓ →<br>可重複_4條件 (D) / 可重複_3條件 (C) / 可重複_2條件 (B) / 可重複 (E) |
 
@@ -21,8 +21,16 @@ Schedules
 
 ## 🗺️ Repository layout
 
----
-
+```text
+.
+├── .github/workflows/
+│   └── update_isin.yml        ← GitHub Actions workflow
+├── data/
+│   └── stock_list.csv         ← Output: ISIN data (含更新日欄位)
+├── main.py                    ← Python script: crawl & export ISIN data
+├── requirements.txt           ← Python dependencies
+└── README.md
+```
 ## ①  GitHub Actions – weekly ISIN workflow
 
 ### Secrets required
@@ -38,7 +46,8 @@ Schedules
 2. Run **`python main.py`**  
    * HTTPS ➜ HTTP fallback, 3× retry, Big5 decoding  
    * Empty DataFrame returned if Emerging (興櫃) is geo-blocked   
-   * Outputs **`data/stock_list.csv`**
+   * Outputs **`data/stock_list.csv`** with columns:  
+  `代號`, `簡稱`, `市場別`, `產業別`, `更新日`
 3. **`git add -f data/stock_list.csv`**  
    * Only in CI (kept ignored locally)  
 4. If diff → bot commit & push  
